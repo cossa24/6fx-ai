@@ -47,8 +47,8 @@ const formSchema = z.object({
     .array(z.string())
     .min(1, "Please select at least one area of interest")
     .max(10),
-  consent: z.literal(true, {
-    errorMap: () => ({ message: "Consent required to proceed" }),
+  consent: z.boolean().refine((val) => val === true, {
+    message: "Consent required to proceed",
   }),
 });
 
@@ -102,7 +102,7 @@ export function MultiStepForm() {
       industry: "",
       problemStatement: "",
       zeusInterest: [],
-      consent: undefined,
+      consent: false,
     },
   });
 
