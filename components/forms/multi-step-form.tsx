@@ -19,36 +19,36 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { submitLead } from "@/actions/lead.action";
+import { useToast } from "@/hooks/use-toast";
 
-// Form schema with step-by-step validation
+// Form schema with step-by-step validation (matches leadFormSchema)
 const formSchema = z.object({
   // Step 1: Contact
-  firstName: z.string().min(2, "First name must be at least 2 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  firstName: z.string().min(1, "First name is required").max(50).trim(),
+  lastName: z.string().min(1, "Last name is required").max(50).trim(),
+  email: z.string().email("Invalid email address").toLowerCase().trim(),
+  phone: z.string().optional().transform((val) => val?.trim()),
 
   // Step 2: Company
-  companyName: z.string().min(2, "Company name must be at least 2 characters"),
-  companySize: z.enum([
-    "1-10",
-    "11-50",
-    "51-200",
-    "201-1000",
-    "1000+",
-  ], {
+  companyName: z.string().min(1, "Company name is required").max(100).trim(),
+  companySize: z.enum(["1-10", "11-50", "51-200", "201-500", "500+"], {
     required_error: "Please select company size",
   }),
-  industry: z.string().min(2, "Industry must be at least 2 characters"),
+  industry: z.string().min(1, "Industry is required").max(50).trim(),
 
   // Step 3: Problem
   problemStatement: z
     .string()
-    .min(20, "Please provide at least 20 characters")
-    .max(1000, "Problem statement must be less than 1000 characters"),
-  zeusInterest: z.array(z.string()).min(1, "Please select at least one area of interest"),
-  consent: z.boolean().refine((val) => val === true, {
-    message: "You must agree to be contacted",
+    .min(20, "Problem statement must be at least 20 characters")
+    .max(1000, "Problem statement must be less than 1000 characters")
+    .trim(),
+  zeusInterest: z
+    .array(z.string())
+    .min(1, "Please select at least one area of interest")
+    .max(10),
+  consent: z.literal(true, {
+    errorMap: () => ({ message: "Consent required to proceed" }),
   }),
 });
 
@@ -68,9 +68,27 @@ const ZEUS_INTERESTS = [
   { id: "consulting", label: "AI Strategy Consulting" },
 ];
 
+/**
+ * Get user-friendly error message based on error code
+ */
+function getErrorMessage(code: string): string {
+  switch (code) {
+    case "RATE_LIMITED":
+      return "Too many requests. Please wait a minute and try again.";
+    case "VALIDATION_ERROR":
+      return "Please check your form inputs and try again.";
+    case "DATABASE_ERROR":
+      return "Something went wrong saving your submission. Please try again.";
+    case "UNKNOWN_ERROR":
+    default:
+      return "An unexpected error occurred. Please try again later.";
+  }
+}
+
 export function MultiStepForm() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -84,7 +102,7 @@ export function MultiStepForm() {
       industry: "",
       problemStatement: "",
       zeusInterest: [],
-      consent: false,
+      consent: undefined,
     },
   });
 
@@ -120,18 +138,37 @@ export function MultiStepForm() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const result = await submitLead(data);
 
-    console.log("Form submitted:", data);
-
-    // Reset form after successful submission
-    form.reset();
-    setCurrentStep(1);
-    setIsSubmitting(false);
-
-    // TODO: Replace with actual API call to your backend
-    // Example: await fetch('/api/leads', { method: 'POST', body: JSON.stringify(data) })
+      if (result.success) {
+        // Show success toast
+        toast({
+          title: "Success!",
+          description: "Your submission has been received. We'll be in touch within 24 hours.",
+        });
+        // Reset form after successful submission
+        form.reset();
+        // Return to first step
+        setCurrentStep(1);
+      } else {
+        // Show error toast
+        toast({
+          title: "Submission failed",
+          description: getErrorMessage(result.code),
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+      }
+    } catch {
+      // Handle unexpected errors
+      toast({
+        title: "Submission failed",
+        description: "An unexpected error occurred. Please try again later.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -255,7 +292,9 @@ export function MultiStepForm() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone</FormLabel>
+                      <FormLabel>
+                        Phone <span className="text-muted-foreground">(Optional)</span>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="tel"
@@ -304,8 +343,8 @@ export function MultiStepForm() {
                           <option value="1-10">1-10 employees</option>
                           <option value="11-50">11-50 employees</option>
                           <option value="51-200">51-200 employees</option>
-                          <option value="201-1000">201-1000 employees</option>
-                          <option value="1000+">1000+ employees</option>
+                          <option value="201-500">201-500 employees</option>
+                          <option value="500+">500+ employees</option>
                         </select>
                       </FormControl>
                       <FormMessage />
