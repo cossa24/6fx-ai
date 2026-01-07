@@ -52,8 +52,8 @@ export const leadFormSchema = z.object({
     .array(z.string())
     .min(1, "Please select at least one area of interest")
     .max(10, "Too many interests selected"),
-  consent: z.literal(true, {
-    errorMap: () => ({ message: "Consent required to proceed" }),
+  consent: z.boolean().refine((val) => val === true, {
+    message: "Consent required to proceed",
   }),
 });
 

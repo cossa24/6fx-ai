@@ -19,17 +19,23 @@ export async function submitLead(
   formData: unknown
 ): Promise<ActionResponse<{ id: string }>> {
   try {
+    console.log("[submitLead] Starting submission...");
+
     // Get IP address from headers
     const headersList = await headers();
     const forwardedFor = headersList.get("x-forwarded-for");
     const realIp = headersList.get("x-real-ip");
     const ip = forwardedFor?.split(",")[0] || realIp || "unknown";
+    console.log("[submitLead] IP:", ip);
 
     // Hash IP address for privacy
     const ipHash = await hashString(ip);
+    console.log("[submitLead] IP hashed successfully");
 
     // Check rate limit
+    console.log("[submitLead] Checking rate limit...");
     const rateLimitResult = await checkRateLimit(ipHash);
+    console.log("[submitLead] Rate limit result:", rateLimitResult);
     if (!rateLimitResult.success) {
       await createAuditLog("rate_limit_exceeded", ipHash, {}, false);
 
@@ -41,8 +47,10 @@ export async function submitLead(
     }
 
     // Validate form data
+    console.log("[submitLead] Validating form data...");
     const validationResult = leadFormSchema.safeParse(formData);
     if (!validationResult.success) {
+      console.error("[submitLead] Validation failed:", validationResult.error.errors);
       await createAuditLog(
         "validation_failed",
         ipHash,
@@ -58,11 +66,14 @@ export async function submitLead(
     }
 
     const validatedData = validationResult.data;
+    console.log("[submitLead] Validation passed");
 
     // Sanitize problem statement
+    console.log("[submitLead] Sanitizing problem statement...");
     const sanitizationResult = sanitizeProblemStatement(
       validatedData.problemStatement
     );
+    console.log("[submitLead] Sanitization result:", { flagged: sanitizationResult.flagged });
 
     if (sanitizationResult.flagged) {
       await createAuditLog(
@@ -83,8 +94,10 @@ export async function submitLead(
     }
 
     // Save lead to Supabase
+    console.log("[submitLead] Connecting to Supabase...");
     const supabase = await createServerClient();
 
+    console.log("[submitLead] Inserting lead into database...");
     const { data: leadData, error: dbError } = await supabase
       .from("leads")
       .insert({
@@ -104,6 +117,7 @@ export async function submitLead(
       .single();
 
     if (dbError || !leadData) {
+      console.error("[submitLead] Database error:", dbError);
       await createAuditLog(
         "error",
         ipHash,
@@ -118,6 +132,8 @@ export async function submitLead(
         code: ErrorCode.DATABASE_ERROR,
       };
     }
+
+    console.log("[submitLead] Lead saved successfully:", leadData.id);
 
     // Create successful audit log
     await createAuditLog(
@@ -149,6 +165,7 @@ export async function submitLead(
     }
 
     // Log unexpected error
+    console.error("[submitLead] Unexpected error caught:", error);
     await createAuditLog(
       "error",
       ipHash,
