@@ -1,0 +1,296 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ═══════════════════════════════════════════════════════════════════════
+       2026 ENTERPRISE TRUST PALETTE - LIGHT MODE
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    /* Dominant (60%) - Cloud Dancer */
+    --background: 0 0% 100%;           /* #EDE7E3 - warm airy white */
+    --card: 0 0% 100%;                 /* slightly warmer for cards */
+    --popover: 0 0% 100%;
+
+    /* Secondary (30%) - Midnight Blue */
+    --primary: 0 0% 9%;             /* #1D3557 - deep navy */
+    --primary-foreground: 0 0% 98%;   /* Cloud Dancer */
+
+    /* Text - Deep Charcoal */
+    --foreground: 0 0% 3.9%;          /* #293241 - soft dark */
+    --card-foreground: 0 0% 3.9%;
+    --popover-foreground: 0 0% 3.9%;
+
+    /* Muted */
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;    /* #5C6B7A */
+
+    /* Accent (10%) - Electric Cyan */
+    --accent: 0 0% 96.1%;             /* #40E0FF */
+    --accent-foreground: 0 0% 9%;   /* Midnight Blue */
+
+    /* Secondary surface */
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+
+    /* Semantic */
+    --destructive: 0 84.2% 60.2%;           /* #EF4444 */
+    --destructive-foreground: 0 0% 98%;
+
+    /* Form elements */
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;               /* Electric Cyan focus ring */
+
+    /* Radius */
+    --radius: 0.5rem;
+
+    /* Chart colors - trust blues */
+    --chart-1: 12 76% 61%;             /* Midnight */
+    --chart-2: 173 58% 39%;             /* Sky */
+    --chart-3: 197 37% 24%;            /* Electric Cyan */
+    --chart-4: 43 74% 66%;             /* Emerald */
+    --chart-5: 27 87% 67%;             /* Charcoal */
+  }
+
+  .dark {
+    /* ═══════════════════════════════════════════════════════════════════════
+       2026 ENTERPRISE TRUST PALETTE - DARK MODE
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    /* Dominant - Deep Navy Charcoal */
+    --background: 0 0% 3.9%;          /* #1A1F2E - navy-charcoal */
+    --card: 0 0% 3.9%;
+    --popover: 0 0% 3.9%;
+
+    /* Secondary - Elevated Midnight */
+    --primary: 0 0% 98%;              /* Cloud Dancer (inverted) */
+    --primary-foreground: 0 0% 9%; /* Midnight Blue */
+
+    /* Text - Light warm */
+    --foreground: 0 0% 98%;
+    --card-foreground: 0 0% 98%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Muted */
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+
+    /* Accent - Electric Cyan (brighter in dark) */
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+
+    /* Secondary surface */
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    /* Semantic */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Form elements */
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+
+    /* Chart colors - dark mode */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ENTERPRISE TRUST COMPONENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Glass morphism cards */
+@layer components {
+  .glass-card {
+    @apply bg-background/80 backdrop-blur-xl border border-border/50;
+    box-shadow:
+      0 4px 24px -4px rgba(29, 53, 87, 0.08),
+      0 0 0 1px rgba(29, 53, 87, 0.03);
+  }
+
+  .dark .glass-card {
+    @apply bg-card/60;
+    box-shadow:
+      0 4px 24px -4px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(64, 224, 255, 0.05);
+  }
+}
+
+/* Gradient mesh hero background */
+@layer components {
+  .hero-gradient {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(29, 53, 87, 0.15), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 50%, rgba(64, 224, 255, 0.08), transparent),
+      radial-gradient(ellipse 50% 50% at 20% 80%, rgba(29, 53, 87, 0.05), transparent);
+  }
+
+  .dark .hero-gradient {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(64, 224, 255, 0.15), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 50%, rgba(29, 53, 87, 0.3), transparent),
+      radial-gradient(ellipse 50% 50% at 20% 80%, rgba(64, 224, 255, 0.05), transparent);
+  }
+}
+
+/* Trust-blue shadows */
+@layer utilities {
+  .shadow-trust {
+    box-shadow:
+      0 1px 3px rgba(29, 53, 87, 0.06),
+      0 4px 12px rgba(29, 53, 87, 0.08);
+  }
+
+  .shadow-trust-lg {
+    box-shadow:
+      0 2px 8px rgba(29, 53, 87, 0.08),
+      0 12px 32px rgba(29, 53, 87, 0.12);
+  }
+
+  .dark .shadow-trust,
+  .dark .shadow-trust-lg {
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(64, 224, 255, 0.03);
+  }
+}
+
+/* Custom scrollbar with trust blue */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full;
+  background: rgba(29, 53, 87, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(29, 53, 87, 0.3);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(64, 224, 255, 0.15);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(64, 224, 255, 0.25);
+}
+
+/* Selection with accent */
+::selection {
+  @apply bg-primary text-primary-foreground;
+}
+
+.dark ::selection {
+  background: rgba(64, 224, 255, 0.3);
+  color: white;
+}
+
+/* Focus ring utility */
+@layer utilities {
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background;
+  }
+}
+
+/* Animations */
+@layer utilities {
+  .animate-in {
+    animation: animateIn 0.3s ease-out forwards;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(64, 224, 255, 0.4);
+  }
+}
+
+@keyframes animateIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Gradient text for headings */
+@layer utilities {
+  .text-gradient-trust {
+    background: linear-gradient(135deg, #1D3557 0%, #40E0FF 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
