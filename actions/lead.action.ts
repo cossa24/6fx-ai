@@ -7,6 +7,7 @@ import { createAuditLog } from "@/lib/supabase/audit";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { sanitizeProblemStatement } from "@/lib/security/sanitize";
 import { hashString } from "@/lib/utils";
+import { syncLeadToCRM } from "@/lib/crm/twenty";
 
 /**
  * Submit lead form data
@@ -134,6 +135,54 @@ export async function submitLead(
     }
 
     console.log("[submitLead] Lead saved successfully:", leadData.id);
+
+    // Sync to CRM (non-blocking)
+    let crmResult = { companyId: null as string | null, personId: null as string | null };
+    try {
+      console.log("[submitLead] Syncing to TwentyCRM...");
+      crmResult = await syncLeadToCRM({
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        email: validatedData.email,
+        phone: validatedData.phone,
+        companyName: validatedData.companyName,
+        companySize: validatedData.companySize,
+        industry: validatedData.industry,
+      });
+
+      // Update lead with CRM ID if sync succeeded
+      if (crmResult.personId) {
+        console.log("[submitLead] CRM sync successful, updating lead record...");
+        try {
+          await supabase
+            .from("leads")
+            .update({ crm_synced: true, crm_id: crmResult.personId })
+            .eq("id", leadData.id);
+        } catch (updateError) {
+          console.warn("[submitLead] Could not update lead with CRM ID:", updateError);
+          // Continue - CRM sync succeeded even if we couldn't update the tracking fields
+        }
+      }
+
+      // Audit CRM sync
+      if (crmResult.personId) {
+        await createAuditLog("crm_synced", ipHash, {
+          leadId: leadData.id,
+          crmPersonId: crmResult.personId,
+          crmCompanyId: crmResult.companyId
+        }, true);
+        console.log("[submitLead] CRM sync completed successfully");
+      } else {
+        console.warn("[submitLead] CRM sync returned no person ID");
+      }
+    } catch (crmError) {
+      console.error("[submitLead] CRM sync failed:", crmError);
+      // Don't fail the lead submission if CRM sync fails
+      await createAuditLog("error", ipHash, {
+        leadId: leadData.id,
+        error: crmError instanceof Error ? crmError.message : "CRM sync failed"
+      }, false);
+    }
 
     // Create successful audit log
     await createAuditLog(
