@@ -127,6 +127,16 @@ export async function submitLead(
         dbError?.message
       );
 
+      // Check for duplicate email error
+      if (dbError?.message?.includes("duplicate key value violates unique constraint") &&
+          dbError?.message?.includes("leads_email_key")) {
+        return {
+          success: false,
+          error: "This email address has already been submitted. If you need to update your information, please contact us.",
+          code: ErrorCode.VALIDATION_ERROR,
+        };
+      }
+
       return {
         success: false,
         error: "Failed to save your submission. Please try again.",
