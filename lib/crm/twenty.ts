@@ -13,6 +13,7 @@ interface CreateCompanyInput {
   name: string;
   domainName?: string;
   employees?: number;
+  industry?: string;
 }
 
 interface TwentyResponse<T> {
@@ -31,6 +32,14 @@ export async function createCompany(input: CreateCompanyInput): Promise<string |
       createCompany(data: $input) {
         id
         name
+        employees
+        domainName {
+          primaryLinkUrl
+          primaryLinkLabel
+        }
+        address {
+          addressCity
+        }
       }
     }
   `;
@@ -47,8 +56,18 @@ export async function createCompany(input: CreateCompanyInput): Promise<string |
         variables: {
           input: {
             name: input.name,
-            domainName: input.domainName,
             employees: input.employees,
+            ...(input.domainName && {
+              domainName: {
+                primaryLinkUrl: input.domainName,
+                primaryLinkLabel: "Website",
+              },
+            }),
+            ...(input.industry && {
+              address: {
+                addressCity: input.industry,
+              },
+            }),
           },
         },
       }),
@@ -82,11 +101,38 @@ export async function createPerson(input: CreatePersonInput, companyId?: string)
           firstName
           lastName
         }
+        emails {
+          primaryEmail
+        }
+        phones {
+          primaryPhoneNumber
+          primaryPhoneCountryCode
+        }
+        company {
+          id
+          name
+        }
       }
     }
   `;
 
   try {
+    // Parse phone number to extract country code
+    let phoneData = undefined;
+    if (input.phone) {
+      const phoneMatch = input.phone.match(/^\+?(\d{1,3})?[\s.-]?(.+)$/);
+      if (phoneMatch) {
+        phoneData = {
+          primaryPhoneNumber: input.phone,
+          primaryPhoneCountryCode: phoneMatch[1] || "1",
+        };
+      } else {
+        phoneData = {
+          primaryPhoneNumber: input.phone,
+        };
+      }
+    }
+
     const response = await fetch(`${TWENTY_API_URL}/graphql`, {
       method: "POST",
       headers: {
@@ -104,9 +150,7 @@ export async function createPerson(input: CreatePersonInput, companyId?: string)
             emails: {
               primaryEmail: input.email,
             },
-            phones: input.phone ? {
-              primaryPhoneNumber: input.phone,
-            } : undefined,
+            phones: phoneData,
             companyId: companyId,
           },
         },
@@ -150,6 +194,7 @@ export async function syncLeadToCRM(lead: {
   const companyId = await createCompany({
     name: lead.companyName,
     employees: employeeMap[lead.companySize] || undefined,
+    industry: lead.industry,
   });
 
   // Create person linked to company
