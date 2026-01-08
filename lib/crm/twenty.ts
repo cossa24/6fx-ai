@@ -16,6 +16,12 @@ interface CreateCompanyInput {
   industry?: string;
 }
 
+interface CreateNoteInput {
+  title: string;
+  problemStatement: string;
+  interests: string[];
+}
+
 interface TwentyResponse<T> {
   data: T;
   errors?: Array<{ message: string }>;
@@ -179,6 +185,115 @@ export async function createPerson(input: CreatePersonInput, companyId?: string)
   }
 }
 
+export async function createNoteForPerson(personId: string, input: CreateNoteInput): Promise<string | null> {
+  if (!TWENTY_API_KEY) {
+    console.warn("TWENTY_CRM_API_KEY not set, skipping note creation");
+    return null;
+  }
+
+  // Format interests as bullet list
+  const interestsList = input.interests.map(interest => `- ${interest}`).join('\n');
+
+  const noteMarkdown = `**Problem Statement:**\n${input.problemStatement}\n\n**Areas of Interest:**\n${interestsList}`;
+
+  const createNoteMutation = `
+    mutation CreateNote($input: NoteCreateInput!) {
+      createNote(data: $input) {
+        id
+        title
+        bodyV2 {
+          markdown
+        }
+      }
+    }
+  `;
+
+  const linkNoteMutation = `
+    mutation CreateNoteTarget($input: NoteTargetCreateInput!) {
+      createNoteTarget(data: $input) {
+        id
+        noteId
+        personId
+      }
+    }
+  `;
+
+  try {
+    // Step 1: Create the note
+    console.log("[TwentyCRM] Creating note for person:", personId);
+    const noteResponse = await fetch(`${TWENTY_API_URL}/graphql`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${TWENTY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query: createNoteMutation,
+        variables: {
+          input: {
+            title: input.title,
+            bodyV2: {
+              markdown: noteMarkdown,
+            },
+          },
+        },
+      }),
+    });
+
+    const noteResult: TwentyResponse<{ createNote: { id: string } }> = await noteResponse.json();
+
+    if (noteResult.errors) {
+      console.error("[TwentyCRM] createNote GraphQL errors:", JSON.stringify(noteResult.errors, null, 2));
+      return null;
+    }
+
+    if (!noteResult.data?.createNote?.id) {
+      console.error("[TwentyCRM] createNote returned no ID:", JSON.stringify(noteResult, null, 2));
+      return null;
+    }
+
+    const noteId = noteResult.data.createNote.id;
+    console.log("[TwentyCRM] Note created successfully:", noteId);
+
+    // Step 2: Link note to person
+    console.log("[TwentyCRM] Linking note to person");
+    const linkResponse = await fetch(`${TWENTY_API_URL}/graphql`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${TWENTY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query: linkNoteMutation,
+        variables: {
+          input: {
+            noteId: noteId,
+            personId: personId,
+          },
+        },
+      }),
+    });
+
+    const linkResult: TwentyResponse<{ createNoteTarget: { id: string } }> = await linkResponse.json();
+
+    if (linkResult.errors) {
+      console.error("[TwentyCRM] createNoteTarget GraphQL errors:", JSON.stringify(linkResult.errors, null, 2));
+      return null;
+    }
+
+    if (!linkResult.data?.createNoteTarget?.id) {
+      console.error("[TwentyCRM] createNoteTarget returned no ID:", JSON.stringify(linkResult, null, 2));
+      return null;
+    }
+
+    console.log("[TwentyCRM] Note linked to person successfully");
+    return noteId;
+  } catch (error) {
+    console.error("[TwentyCRM] createNoteForPerson exception:", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
 export async function syncLeadToCRM(lead: {
   firstName: string;
   lastName: string;
@@ -187,7 +302,9 @@ export async function syncLeadToCRM(lead: {
   companyName: string;
   companySize: string;
   industry: string;
-}): Promise<{ companyId: string | null; personId: string | null }> {
+  problemStatement: string;
+  zeusInterest: string[];
+}): Promise<{ companyId: string | null; personId: string | null; noteId: string | null }> {
   console.log("[TwentyCRM] Starting CRM sync for:", {
     name: `${lead.firstName} ${lead.lastName}`,
     company: lead.companyName
@@ -227,8 +344,21 @@ export async function syncLeadToCRM(lead: {
 
   if (!personId) {
     console.error("[TwentyCRM] Person creation failed");
+    return { companyId, personId: null, noteId: null };
   }
 
-  console.log("[TwentyCRM] Sync complete:", { companyId, personId });
-  return { companyId, personId };
+  // Create note with problem statement and interests
+  console.log("[TwentyCRM] Creating note with problem statement and interests");
+  const noteId = await createNoteForPerson(personId, {
+    title: "Lead Submission Details",
+    problemStatement: lead.problemStatement,
+    interests: lead.zeusInterest,
+  });
+
+  if (!noteId) {
+    console.warn("[TwentyCRM] Note creation failed, but person and company were created successfully");
+  }
+
+  console.log("[TwentyCRM] Sync complete:", { companyId, personId, noteId });
+  return { companyId, personId, noteId };
 }

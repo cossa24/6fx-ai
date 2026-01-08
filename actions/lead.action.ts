@@ -147,7 +147,7 @@ export async function submitLead(
     console.log("[submitLead] Lead saved successfully:", leadData.id);
 
     // Sync to CRM (non-blocking)
-    let crmResult = { companyId: null as string | null, personId: null as string | null };
+    let crmResult = { companyId: null as string | null, personId: null as string | null, noteId: null as string | null };
     try {
       console.log("[submitLead] Syncing to TwentyCRM...");
       crmResult = await syncLeadToCRM({
@@ -158,6 +158,8 @@ export async function submitLead(
         companyName: validatedData.companyName,
         companySize: validatedData.companySize,
         industry: validatedData.industry,
+        problemStatement: sanitizationResult.sanitized,
+        zeusInterest: validatedData.zeusInterest,
       });
 
       // Update lead with CRM ID if sync succeeded
@@ -179,7 +181,8 @@ export async function submitLead(
         await createAuditLog("crm_synced", ipHash, {
           leadId: leadData.id,
           crmPersonId: crmResult.personId,
-          crmCompanyId: crmResult.companyId
+          crmCompanyId: crmResult.companyId,
+          crmNoteId: crmResult.noteId
         }, true);
         console.log("[submitLead] CRM sync completed successfully");
       } else {
